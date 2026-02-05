@@ -1,0 +1,11 @@
+[package]
+name = "rolling_check"
+version = "0.1.0"
+edition = "2024"
+authors = ["Shawn Liu <shawn666.liu@hotmail.com>"]
+description = "期货合约换月检查工具"
+
+[dependencies]
+anyhow = "*"
+chrono = { version = "*", features = ["serde"] }
+tradecalendar = { version = "*", git = "https://github.com/shawn666liu/tradecalendar-rs.git" }
