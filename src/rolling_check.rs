@@ -15,14 +15,14 @@ use crate::normal_rolling::NormalRolling;
 pub struct SimpleMktData {
     /// 对于郑州品种, 也是4位数字, 已经处理好了
     /// 仅依靠合约进行排序是不可靠的, 比如1999.12的合约名为9912, 2000.1月的合约名为0001
-    inst: String,
-    volume: u64,
-    openint: u64,
+    pub inst: String,
+    pub volume: u64,
+    pub openint: u64,
     /// 用此字段排序是可以的
-    expire_date: NaiveDate,
+    pub expire_date: NaiveDate,
 
     /// 复合权重, 利用成交量和持仓量算得
-    combined_weight: u64,
+    pub combined_weight: u64,
 }
 
 impl SimpleMktData {
