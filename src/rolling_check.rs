@@ -1,7 +1,6 @@
 use anyhow::Result;
-use chrono::{Datelike, NaiveDate};
-use std::collections::{HashMap, HashSet};
-use std::hash::Hash;
+use chrono::NaiveDate;
+use std::collections::HashSet;
 
 use crate::util;
 use tradecalendar::*;

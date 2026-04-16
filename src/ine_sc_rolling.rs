@@ -23,7 +23,7 @@ impl IneScRolling {
         expire_date: &NaiveDate,
     ) -> NaiveDate {
         let inst_month = get_inst_month(instrument, expire_date.year());
-        let expire_month = NaiveDate::from_ymd(expire_date.year(), expire_date.month(), 1);
+        let expire_month = expire_date.with_day(1).expect("no fail");
         let last_day = if expire_month == inst_month {
             // 比如同在5月, 则从5月1号开始, 向前推11个交易日, 就是换月日期
             // expire_month==inst_month==2022-05-01

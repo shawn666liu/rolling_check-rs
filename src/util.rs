@@ -71,5 +71,5 @@ pub fn get_inst_month(instrument: &str, expire_year: i32) -> NaiveDate {
     if expire_year > year {
         year += 100;
     }
-    return NaiveDate::from_ymd(year, month as u32, 1);
+    return NaiveDate::from_ymd_opt(year, month as u32, 1).expect("no fail");
 }

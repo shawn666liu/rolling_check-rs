@@ -39,8 +39,8 @@ fn get_friday(input: &NaiveDate, which_week: ProductExitWeek) -> NaiveDate {
     let year = input.year();
     let month = input.month();
 
-    let first_day = NaiveDate::from_ymd(year, month, 1);
-    let next_month = NaiveDate::from_ymd(
+    let first_day = NaiveDate::from_ymd_opt(year, month, 1).expect("no fail");
+    let next_month = NaiveDate::from_ymd_opt(
         match month {
             12 => year + 1,
             _ => year,
@@ -50,7 +50,8 @@ fn get_friday(input: &NaiveDate, which_week: ProductExitWeek) -> NaiveDate {
             _ => month + 1,
         },
         1,
-    );
+    )
+    .expect("no fail");
 
     let mut result = first_day;
     let mut friday_count = 0;

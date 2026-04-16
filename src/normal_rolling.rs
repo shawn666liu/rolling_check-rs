@@ -11,7 +11,7 @@ impl NormalRolling {
     pub fn calc_must_exit_date(tdmgr: &TradeCalendar, expire_date: &NaiveDate) -> NaiveDate {
         // 比如ru2205, 在5月交割, 我们必须在4月份最后的交易日前换月,
         // 如果4月31日是最后交易日, 那么应该在29号左右强制换月, 这时候无需满足权重1.1倍的要求
-        let expire_month = NaiveDate::from_ymd(expire_date.year(), expire_date.month(), 1);
+        let expire_month = expire_date.with_day(1).expect("no fail");
         let pre_3_tdays = tdmgr
             .get_prev_trading_day(&expire_month, 3)
             .expect("failed to get prev 3 trading day");
