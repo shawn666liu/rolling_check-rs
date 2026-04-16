@@ -30,12 +30,9 @@ pub fn trim_num_and_after(input: &str) -> &str {
     return input;
 }
 
-/// 获取尾部的数字
-///
-/// IF1905 => 1905
-///
-/// IF1905A => ""
-///
+/// 获取尾部的数字<br>
+/// IF1905 => 1905<br>
+/// IF1905A => ""<br>
 /// 黄大豆1号1501 => 1501
 pub fn get_tail_numbers(input: &str) -> &str {
     let buf = input.as_bytes();
@@ -50,9 +47,10 @@ pub fn get_tail_numbers(input: &str) -> &str {
     return input;
 }
 
-/// 根据合约名及最后交易日期所在的年份, 获取该合约名代表的月份(日期为1号)
-/// expire_year在这里的作用是提供年份指引, 因为合约名没有年份的前两位数字
-/// 注意, 这里要求instrument已经是4位数字, 如果不是请先调用fix_czce_inst()
+/// 根据合约名及最后交易日期所在的年份, 获取该合约名代表的月份(日期为1号),<br>
+/// expire_year在这里的作用是提供年份指引, 因为合约名没有年份的前两位数字,<br>
+/// 注意, 这里要求instrument已经是4位数字, 如果不是请先调用fix_czce_inst(),<br>
+/// 例如, ru2205 => 2022-05-01
 pub fn get_inst_month(instrument: &str, expire_year: i32) -> NaiveDate {
     // 一般情况下,合约月份与最后交易日在同一个月, 比如sc2205的交割月为22年5月;
     // 但是因元旦春节等影响, 也有例外, 比如 sc2002的最后交易日为20年1月16日,并不在2月份,

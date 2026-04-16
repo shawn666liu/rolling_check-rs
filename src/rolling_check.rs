@@ -13,8 +13,9 @@ use crate::normal_rolling::NormalRolling;
 /// 换月检查需要用到的最基础的行情数据
 #[derive(Clone, Debug)]
 pub struct SimpleMktData {
-    /// 对于郑州品种, 也是4位数字, 已经处理好了
-    /// 仅依靠合约进行排序是不可靠的, 比如1999.12的合约名为9912, 2000.1月的合约名为0001
+    /// 对于郑州品种, 也是4位数字, 必须已经处理好了<br>
+    /// 仅依靠合约进行排序是不可靠的, 比如1999.12的合约名为9912, 2000.1月的合约名为0001, 后续合约排序反而在前了<br>
+    /// 所以，使用expire_date排序
     pub inst: String,
     pub volume: u64,
     pub openint: u64,
@@ -26,7 +27,13 @@ pub struct SimpleMktData {
 }
 
 impl SimpleMktData {
-    pub fn new(inst: String, volume: u64, openint: u64, expire_date: NaiveDate) -> Self {
+    pub fn new(
+        inst: String,
+        xchg: String,
+        volume: u64,
+        openint: u64,
+        expire_date: NaiveDate,
+    ) -> Self {
         Self {
             inst,
             volume,
@@ -111,17 +118,28 @@ impl<'a> RollingChecker<'a> {
         self.openint_weight = weight;
     }
 
-    /// 对某一个品种进行换月检查
-    /// 输入: cur_primary, 当前主力合约,
-    ///       当天`该品种`所有合约的行情(成交量,持仓量,到期日)
-    /// 注意: 1) 当前主力合约有可能是空,比如新品种上市;
-    ///      2) 有可能是不存在的合约, 比如很久都没有执行换月程序了, 突然重新启用程序
+    /// 对某一个品种进行换月检查，输入:<br>  
+    /// - cur_primary, 当前主力合约,<br>
+    /// - md_vec, 当天`该品种`所有合约的行情(成交量,持仓量,到期日)
+    ///
+    /// 返回值:<br>
+    /// - opt(current), 当前主力合约<br>
+    /// - next_primary, 下一个主力合约 <br>
+    ///
+    /// 注意:<br>
+    /// 1) 当前主力合约有可能是空,比如新品种上市,主力合约未知;<br>
+    /// 2) 有可能是不存在的合约, 比如很久都没有执行换月程序了, 突然重新启用程序, 显然旧合约已经下市了<br>
     pub fn check_product(
         &self,
         cur_primary: &str,
         md_vec: Vec<SimpleMktData>,
+        exchange: &str,
     ) -> Result<(Option<SimpleMktData>, SimpleMktData)> {
-        anyhow::ensure!(md_vec.len() > 0);
+        anyhow::ensure!(
+            md_vec.len() > 0,
+            format!("rolling_check: md_vec is empty. {}", cur_primary)
+        );
+
         let mut md_vec = md_vec;
         md_vec
             .iter_mut()
@@ -136,13 +154,32 @@ impl<'a> RollingChecker<'a> {
         // 权重从大到小排列, 所以比较时t2在前; 若weight相同, 则保持月份顺序, 所以不用unstable_sort
         ordby_weight.sort_by(|t1, t2| t2.combined_weight.cmp(&t1.combined_weight));
 
-        let any_inst = &md_vec.iter().next().expect("no fail").inst;
-        let product = util::trim_num_and_after(any_inst);
+        let any_md = &md_vec.iter().next().expect("no fail");
+        anyhow::ensure!(
+            any_md.inst != "",
+            format!("rolling_check: any_md.inst is empty. {}", cur_primary)
+        );
+        let product = util::trim_num_and_after(&any_md.inst);
+        anyhow::ensure!(
+            product != "",
+            format!("rolling_check: product is empty for {}", any_md.inst)
+        );
         let next_primary = if self.ine_sc.contains(product) {
             self.check_ine_sc(opt_current, &ordby_expire, &ordby_weight)
         } else if self.stock_index.contains(product) {
             self.check_stock_index(opt_current, &ordby_expire, &ordby_weight)
+        } else if self.bonds_future.contains(product) {
+            self.check_bonds(opt_current, &ordby_expire, &ordby_weight)
         } else {
+            // 如果没有及时更新股指或者国债品种列表，新品种上市之后，只能作为普通合约处理
+            // 但是我们会进行一个提醒, 通知用户更新列表
+            if exchange == "CFFEX" {
+                return Err(anyhow::anyhow!(
+                    "rolling_check: 似乎有CFFEX新品种上市, 请先更新列表, {}",
+                    product
+                ));
+            }
+
             self.check_others(opt_current, &ordby_expire, &ordby_weight)
         };
         let opt = match opt_current {
