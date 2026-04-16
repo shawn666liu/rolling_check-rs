@@ -27,13 +27,7 @@ pub struct SimpleMktData {
 }
 
 impl SimpleMktData {
-    pub fn new(
-        inst: String,
-        xchg: String,
-        volume: u64,
-        openint: u64,
-        expire_date: NaiveDate,
-    ) -> Self {
+    pub fn new(inst: String, volume: u64, openint: u64, expire_date: NaiveDate) -> Self {
         Self {
             inst,
             volume,
