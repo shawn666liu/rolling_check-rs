@@ -21,6 +21,7 @@ impl FinanceRolling {
         tdmgr: &TradeCalendar,
         expire_date: &NaiveDate,
         weeks: ProductExitWeek,
+        early_days: usize,
     ) -> NaiveDate {
         // 目前股指和国债的合约名与交割月是统一的
 
@@ -28,8 +29,8 @@ impl FinanceRolling {
         let last_day = friday.min(expire_date);
         // 最后日期向前推2个交易日
         let pre_tdays = tdmgr
-            .get_prev_trading_day(last_day, 2)
-            .expect("failed to get prev 2 trading day");
+            .get_prev_trading_day(last_day, early_days)
+            .expect(&format!("failed to get prev {} trading day", early_days));
         return pre_tdays.date;
     }
 }

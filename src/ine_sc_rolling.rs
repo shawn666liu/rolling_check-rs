@@ -13,14 +13,16 @@ pub struct IneScRolling {}
 const LOOKBACK_DAYS: usize = 11;
 
 impl IneScRolling {
-    /// 根据某个合约的expire_date, 计算它必须换月的日期,
-    /// 一般是交割月前一个月最后交易日向前推11~12个交易日,
-    /// instrument是该合约名称, 一般情况是合约名跟最后交易日是在同一个月, 比如sc2205就是在22年5月某天最后交易日;
-    /// 但是因为元旦春节国庆等假期, 会导致不一致, 比如sc2002合约, 理论上最后交易日应该在20年2月某日, 但实际最后交易日在20年1月16日
+    /// 根据某个合约的expire_date, 计算它必须换月的日期,<br>
+    /// 一般是交割月前一个月最后交易日向前推11个交易日,通过early_days参数指定提前处理增加的天数,<br>
+    /// instrument是该合约名称, 一般情况是合约名跟最后交易日是在同一个月, 比如sc2205就是在22年5月某天最后交易日;<br>
+    /// 但是因为元旦春节国庆等假期, 会导致不一致, 比如sc2002合约, 理论上最后交易日应该在20年2月某日, 但实际最后交易日在20年1月16日<br>
+    /// early_days: 提前处理的天数, 缺省0, 实际在11的基础上增加
     pub fn calc_must_exit_date(
         tdmgr: &TradeCalendar,
         instrument: &str,
         expire_date: &NaiveDate,
+        early_days: usize,
     ) -> NaiveDate {
         let inst_month = get_inst_month(instrument, expire_date.year());
         let expire_month = expire_date.with_day(1).expect("no fail");
@@ -35,7 +37,7 @@ impl IneScRolling {
             expire_date
         };
         let pr_tdays = tdmgr
-            .get_prev_trading_day(last_day, LOOKBACK_DAYS)
+            .get_prev_trading_day(last_day, LOOKBACK_DAYS + early_days)
             .expect("failed to get prev LOOKBACK_DAYS trading day");
         return pr_tdays.date;
     }

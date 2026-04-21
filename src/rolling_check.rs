@@ -37,17 +37,19 @@ impl SimpleMktData {
     }
 
     pub fn calc_combined_weight(&mut self, volume_weight: f64, openint_weight: f64) {
-        self.combined_weight =
-            (self.volume as f64 * volume_weight + self.openint as f64 * openint_weight) as u64;
+        self.combined_weight = (self.volume as f64 * volume_weight
+            + self.openint as f64 * openint_weight)
+            .round() as u64;
     }
 
     /// next合约是否满足取代current作为主力合约, 需满足两个条件
-    /// 1) 复合权重达到旧合约1.1倍
+    /// 1) 复合权重达到旧合约weight_threshold（默认1.1）倍
     /// 2) next是更远的月份
-    pub fn is_rolling_needed(current: &Self, next: &Self) -> bool {
-        // 这里比较Weight不使用>=的原因，是因为有些不活跃的品种，持仓都为零，会被换到最远的远月
+    pub fn is_rolling_needed(current: &Self, next: &Self, weight_threshold: f64) -> bool {
+        // 这里比较Weight使用>而不是使用>=的原因，是因为有些不活跃的品种，持仓都为零，会被换到最远的远月
         if next.expire_date > current.expire_date
-            && next.combined_weight > (current.combined_weight as f64 * 1.1) as u64
+            && next.combined_weight
+                > (current.combined_weight as f64 * weight_threshold).round() as u64
         {
             return true;
         }
@@ -66,6 +68,15 @@ pub struct RollingChecker<'a> {
     volume_weight: f64,
     /// 换月时持仓量权重, default 0.4
     openint_weight: f64,
+    /// 权重达到旧合约1.1倍, 才进行换月, default 1.1
+    weight_threshold: f64,
+
+    /// 原油期货换月时, 比强制换月提前天数, default 3
+    sc_early_days: usize,
+    /// 金融期货换月时, 比强制换月提前天数, default 3
+    finance_early_days: usize,
+    /// 普通期货换月时, 比强制换月提前天数, default 3
+    normal_early_days: usize,
 }
 
 impl<'a> RollingChecker<'a> {
@@ -87,7 +98,11 @@ impl<'a> RollingChecker<'a> {
             bonds_future,
             ine_sc,
             volume_weight: 0.6,
-            openint_weight: 0.6,
+            openint_weight: 0.4,
+            weight_threshold: 1.1,
+            sc_early_days: 3,
+            finance_early_days: 3,
+            normal_early_days: 3,
         }
     }
 
@@ -103,12 +118,29 @@ impl<'a> RollingChecker<'a> {
     pub fn set_bonds_future(&mut self, items: HashSet<String>) {
         self.bonds_future = items;
     }
-
+    /// 设置换月时成交量权重, default 0.6
     pub fn set_volume_weight(&mut self, weight: f64) {
         self.volume_weight = weight;
     }
+    /// 设置换月时持仓量权重, default 0.4
     pub fn set_openint_weight(&mut self, weight: f64) {
         self.openint_weight = weight;
+    }
+    /// 设置换月权重阈值, default 1.1
+    pub fn set_weight_threshold(&mut self, threshold: f64) {
+        self.weight_threshold = threshold;
+    }
+    /// 原油期货换月时, 比强制换月提前天数, default 3
+    pub fn set_sc_early_days(&mut self, days: usize) {
+        self.sc_early_days = days;
+    }
+    /// 金融期货换月时, 比强制换月提前天数, default 3
+    pub fn set_finance_early_days(&mut self, days: usize) {
+        self.finance_early_days = days;
+    }
+    /// 普通期货换月时, 比强制换月提前天数, default 3
+    pub fn set_normal_early_days(&mut self, days: usize) {
+        self.normal_early_days = days;
     }
 
     /// 对某一个品种进行换月检查，输入:<br>  
@@ -200,6 +232,7 @@ impl<'a> RollingChecker<'a> {
             self.tdmgr,
             &maybe_this.inst,
             &maybe_this.expire_date,
+            self.sc_early_days,
         );
 
         // 3) 若需强制换月, 则进行处理
@@ -231,6 +264,7 @@ impl<'a> RollingChecker<'a> {
             self.tdmgr,
             &maybe_this.expire_date,
             ProductExitWeek::StockIndex,
+            self.finance_early_days,
         );
         if must_exit_date <= self.test_day {
             // 强制换月, 直接换到后面一个月, 不管weight权重, 注意ordered_vec是日期排序的ordby_expire
@@ -253,6 +287,7 @@ impl<'a> RollingChecker<'a> {
             self.tdmgr,
             &maybe_this.expire_date,
             ProductExitWeek::Bonds,
+            self.finance_early_days,
         );
         if must_exit_date <= self.test_day {
             maybe_this = self.fore_rolling_check(maybe_this, ordby_expire, ordby_weight);
@@ -269,15 +304,20 @@ impl<'a> RollingChecker<'a> {
     ) -> &'a SimpleMktData {
         let mut maybe_this = self.get_next_normally(opt_current, ordby_expire, ordby_weight);
 
-        let must_exit_date =
-            NormalRolling::calc_must_exit_date(self.tdmgr, &maybe_this.expire_date);
+        let must_exit_date = NormalRolling::calc_must_exit_date(
+            self.tdmgr,
+            &maybe_this.expire_date,
+            self.normal_early_days,
+        );
         if must_exit_date <= self.test_day {
             maybe_this = self.fore_rolling_check(maybe_this, ordby_expire, ordby_weight);
         }
         return maybe_this;
     }
 
-    /// 常规处理获取下月, 满足权重1.1倍则向后切换, 不开倒车; opt_current为空则取当前权重最大者; 不对月份日期有其他要求
+    /// 常规处理获取下月:<br>
+    /// 满足权重weight_threshold（默认1.1）倍则向后切换, 不开倒车; <br>
+    /// opt_current为空则取当前权重最大者; 不对月份日期有其他要求 <br>
     /// 注意: 有可能是不改变, 将opt_current原路返回
     fn get_next_normally(
         &self,
@@ -289,7 +329,7 @@ impl<'a> RollingChecker<'a> {
             Some(mut current) => {
                 // 寻找比current更远的月份，并且权重满足1.1的要求
                 for item in ordby_expire {
-                    if SimpleMktData::is_rolling_needed(current, item) {
+                    if SimpleMktData::is_rolling_needed(current, item, self.weight_threshold) {
                         current = item;
                         break;
                     }

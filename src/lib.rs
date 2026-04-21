@@ -7,6 +7,7 @@ mod finance_rolling;
 mod ine_sc_rolling;
 mod normal_rolling;
 mod rolling_check;
+mod utest;
 mod util;
 
 pub use crate::rolling_check::*;
