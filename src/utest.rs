@@ -29,20 +29,20 @@ mod tests {
         let test_date = NaiveDate::parse_from_str("2024-01-15", "%Y-%m-%d").unwrap();
         let checker = RollingChecker::new(&calendar, &test_date);
 
-        // 创建测试数据：当前主力合约RU2401，新合约RU2403权重更高
+        // 创建测试数据：当前主力合约ru2401，新合约ru2403权重更高
         let md_vec = vec![
-            create_test_mkt_data("RU2401", 1000, 500, "2024-01-31"),
-            create_test_mkt_data("RU2403", 2000, 1000, "2024-03-31"),
-            create_test_mkt_data("RU2405", 500, 300, "2024-05-31"),
+            create_test_mkt_data("ru2401", 1000, 500, "2024-01-31"),
+            create_test_mkt_data("ru2403", 2000, 1000, "2024-03-31"),
+            create_test_mkt_data("ru2405", 500, 300, "2024-05-31"),
         ];
 
-        let result = checker.check_product("RU2401", md_vec, "SHFE");
+        let result = checker.check_product("ru2401", md_vec, "SHFE");
         assert!(result.is_ok());
 
         let (current, next) = result.unwrap();
         assert!(current.is_some());
-        assert_eq!(current.unwrap().inst, "RU2401");
-        assert_eq!(next.inst, "RU2403"); // 权重更高的合约应该成为新主力
+        assert_eq!(current.unwrap().inst, "ru2401");
+        assert_eq!(next.inst, "ru2403"); // 权重更高的合约应该成为新主力
     }
 
     #[test]
@@ -118,7 +118,7 @@ mod tests {
         // 空的市场数据应该返回错误
         let md_vec: Vec<SimpleMktData> = vec![];
 
-        let result = checker.check_product("RU2401", md_vec, "SHFE");
+        let result = checker.check_product("ru2401", md_vec, "SHFE");
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("md_vec is empty"));
     }
@@ -196,16 +196,16 @@ mod tests {
 
         // 当前主力合约不在市场数据列表中（可能已下市）
         let md_vec = vec![
-            create_test_mkt_data("RU2403", 2000, 1000, "2024-03-31"),
-            create_test_mkt_data("RU2405", 1500, 800, "2024-05-31"),
+            create_test_mkt_data("ru2403", 2000, 1000, "2024-03-31"),
+            create_test_mkt_data("ru2405", 1500, 800, "2024-05-31"),
         ];
 
-        let result = checker.check_product("RU2401", md_vec, "SHFE");
+        let result = checker.check_product("ru2401", md_vec, "SHFE");
         assert!(result.is_ok());
 
         let (current, next) = result.unwrap();
         assert!(current.is_none()); // 当前合约不在列表中，应该返回None
-        assert_eq!(next.inst, "RU2403"); // 应该选择权重最高的合约
+        assert_eq!(next.inst, "ru2403"); // 应该选择权重最高的合约
     }
 
     #[test]
@@ -215,15 +215,15 @@ mod tests {
         let checker = RollingChecker::new(&calendar, &test_date);
 
         // 只有一个合约的情况
-        let md_vec = vec![create_test_mkt_data("RU2401", 1000, 500, "2024-01-31")];
+        let md_vec = vec![create_test_mkt_data("ru2401", 1000, 500, "2024-01-31")];
 
-        let result = checker.check_product("RU2401", md_vec, "SHFE");
+        let result = checker.check_product("ru2401", md_vec, "SHFE");
         assert!(result.is_ok());
 
         let (current, next) = result.unwrap();
         assert!(current.is_some());
-        assert_eq!(current.unwrap().inst, "RU2401");
-        assert_eq!(next.inst, "RU2401"); // 只有一个合约，应该保持不变
+        assert_eq!(current.unwrap().inst, "ru2401");
+        assert_eq!(next.inst, "ru2401"); // 只有一个合约，应该保持不变
     }
 
     #[test]
@@ -233,15 +233,15 @@ mod tests {
         let checker = RollingChecker::new(&calendar, &test_date);
 
         // 测试权重计算是否正确
-        let mut md1 = create_test_mkt_data("RU2401", 1000, 500, "2024-01-31");
-        let mut md2 = create_test_mkt_data("RU2403", 2000, 1000, "2024-03-31");
+        let mut md1 = create_test_mkt_data("ru2401", 1000, 500, "2024-01-31");
+        let mut md2 = create_test_mkt_data("ru2403", 2000, 1000, "2024-03-31");
 
         // 手动计算权重进行验证
         md1.calc_combined_weight(0.6, 0.4);
         md2.calc_combined_weight(0.6, 0.4);
 
         let md_vec = vec![md1, md2];
-        let result = checker.check_product("RU2401", md_vec, "SHFE");
+        let result = checker.check_product("ru2401", md_vec, "SHFE");
         assert!(result.is_ok());
     }
 }

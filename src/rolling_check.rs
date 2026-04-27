@@ -71,11 +71,11 @@ pub struct RollingChecker<'a> {
     /// 权重达到旧合约1.1倍, 才进行换月, default 1.1
     weight_threshold: f64,
 
-    /// 原油期货换月时, 比强制换月提前天数, default 3
+    /// 原油期货换月时, 比强制换月提前天数, default 4
     sc_early_days: usize,
-    /// 金融期货换月时, 比强制换月提前天数, default 3
+    /// 金融期货换月时, 比强制换月提前天数, default 4
     finance_early_days: usize,
-    /// 普通期货换月时, 比强制换月提前天数, default 3
+    /// 普通期货换月时, 比强制换月提前天数, default 4
     normal_early_days: usize,
 }
 
@@ -100,9 +100,9 @@ impl<'a> RollingChecker<'a> {
             volume_weight: 0.6,
             openint_weight: 0.4,
             weight_threshold: 1.1,
-            sc_early_days: 3,
-            finance_early_days: 3,
-            normal_early_days: 3,
+            sc_early_days: 4,
+            finance_early_days: 4,
+            normal_early_days: 4,
         }
     }
 
