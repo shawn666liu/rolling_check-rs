@@ -139,10 +139,31 @@ mod tests {
         let result = checker.check_product("IF2401", md_vec, "CFFEX");
         assert!(result.is_ok());
 
-        let (current, _next) = result.unwrap();
+        let (current, next) = result.unwrap();
         assert!(current.is_some());
         assert_eq!(current.unwrap().inst, "IF2401");
-        // 股指期货有特殊的换月规则，这里主要测试流程正常
+        assert_eq!(next.inst, "IF2402");
+    }
+
+    #[test]
+    fn test_check_product_stock_index_rolling_2() {
+        let calendar = get_calendar();
+        let test_date = NaiveDate::parse_from_str("2026-05-06", "%Y-%m-%d").unwrap();
+        let checker = RollingChecker::new(&calendar, &test_date);
+
+        // 股指期货换月测试
+        let md_vec = vec![
+            create_test_mkt_data("IF2605", 27460, 39560, "2026-05-15"),
+            create_test_mkt_data("IF2606", 65439, 149562, "2026-06-22"),
+            create_test_mkt_data("IF2609", 16566, 70938, "2026-09-18"),
+            create_test_mkt_data("IF2612", 5375, 14663, "2026-12-18"),
+        ];
+
+        let result = checker.check_product("IF2605", md_vec, "CFFEX");
+        assert!(result.is_ok());
+
+        let (_current, next) = result.unwrap();
+        assert_eq!(next.inst, "IF2606");
     }
 
     #[test]

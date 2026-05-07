@@ -253,8 +253,21 @@ impl<'a> RollingChecker<'a> {
         // 注意: 股指期货的要求是逐月换, 中间不跨越
         // 即不从IF1901换到IF1903，即使IF1903的权重大于IF1902
 
-        // 确保当前合约非空,
-        // 注意, 这里没有根据normal规则往后推,
+        // 首先判断紧挨着的下一个合约是否存在，若存在，是否满足权重换月
+
+        // 注意，这里不能根据ordby_expire来获取下月, 因为vec里面只有4个合约，后面两个是季月和远月，不是连续出现的
+        // 比如vec里面是[IF2605, IF2606, IF2609, IF2612], 如果输入IF2606, 是无法获取到IF2607的，所以使用calc_next_inst来获取
+        if let Some(current) = &opt_current {
+            let next_inst = FinanceRolling::calc_next_inst(current);
+            let maybe_next = ordby_expire.iter().find(|&x| x.inst == next_inst);
+
+            if let Some(next) = maybe_next {
+                if SimpleMktData::is_rolling_needed(current, next, self.weight_threshold) {
+                    return next;
+                }
+            }
+        }
+
         // 只有opt为空时, 才选个权重大的
         let maybe_this = match opt_current {
             Some(current) => current,
@@ -267,7 +280,7 @@ impl<'a> RollingChecker<'a> {
             self.finance_early_days,
         );
         if must_exit_date <= self.test_day {
-            // 强制换月, 直接换到后面一个月, 不管weight权重, 注意ordered_vec是日期排序的ordby_expire
+            // 强制换月, 直接换到后面一个月, 不管weight权重, 注意是日期排序的ordby_expire
             return self.get_next_by_expire_date(maybe_this, ordby_expire);
         }
 

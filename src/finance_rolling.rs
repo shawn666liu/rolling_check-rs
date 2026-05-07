@@ -1,6 +1,8 @@
 use chrono::{Datelike, Duration, NaiveDate, Weekday};
 use tradecalendar::{TradeCalendar, TradingdayCache};
 
+use crate::{SimpleMktData, util};
+
 /// 金融期货最后交易所在的星期
 #[derive(Copy, Clone)]
 pub enum ProductExitWeek {
@@ -33,26 +35,27 @@ impl FinanceRolling {
             .expect(&format!("failed to get prev {} trading day", early_days));
         return pre_tdays.date;
     }
+
+    /// 因为股指期货是每个月都存在合约的，计算出下一个月就可以知道下一个合约名
+    pub fn calc_next_inst(smd: &SimpleMktData) -> String {
+        let curr_month = util::get_inst_month(&smd.inst, smd.expire_date.year());
+        let next_month = util::next_month(&curr_month);
+        let prd = util::trim_num_and_after(&smd.inst);
+
+        let next_inst = format!(
+            "{}{:>02}{:>02}",
+            prd,
+            next_month.year() % 100,
+            next_month.month()
+        );
+        return next_inst;
+    }
 }
 
 /// 获取输入日期所在月份的第某个（二或者三）星期五
 fn get_friday(input: &NaiveDate, which_week: ProductExitWeek) -> NaiveDate {
-    let year = input.year();
-    let month = input.month();
-
-    let first_day = NaiveDate::from_ymd_opt(year, month, 1).expect("no fail");
-    let next_month = NaiveDate::from_ymd_opt(
-        match month {
-            12 => year + 1,
-            _ => year,
-        },
-        match month {
-            12 => 1,
-            _ => month + 1,
-        },
-        1,
-    )
-    .expect("no fail");
+    let first_day = input.with_day(1).expect("no fail");
+    let next_month = util::next_month(input);
 
     let mut result = first_day;
     let mut friday_count = 0;

@@ -1,4 +1,4 @@
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 
 /// 移除首个出现的数字及其后所有字符,如果首字母是数字则从其后首个非数字之后开始移除  
 ///
@@ -72,4 +72,16 @@ pub fn get_inst_month(instrument: &str, expire_year: i32) -> NaiveDate {
         year += 100;
     }
     return NaiveDate::from_ymd_opt(year, month as u32, 1).expect("no fail");
+}
+
+/// 日期都是1号
+pub fn next_month(date: &NaiveDate) -> NaiveDate {
+    let year = date.year();
+    let month = date.month();
+    let next_month = if month == 12 {
+        NaiveDate::from_ymd_opt(year + 1, 1, 1).expect("no fail")
+    } else {
+        NaiveDate::from_ymd_opt(year, month + 1, 1).expect("no fail")
+    };
+    return next_month;
 }
